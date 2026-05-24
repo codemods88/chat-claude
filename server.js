@@ -4,14 +4,11 @@ import { createServer } from 'node:http';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
-const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
-const MODEL = process.env.MODEL || 'anthropic/claude-sonnet-4-20250514';
-const SITE_URL = process.env.SITE_URL || 'https://chat-claude.coolify.codemods.com';
-const SITE_NAME = process.env.SITE_NAME || 'Chat Claude';
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || '';
+const NVIDIA_BASE = 'https://integrate.api.nvidia.com/v1';
+const MODEL = process.env.MODEL || 'meta/llama-3.2-3b-instruct';
 
 app.use(express.json({ limit: '10mb' }));
-
 app.use(express.static('public'));
 
 app.get('/api/health', (req, res) => {
@@ -24,22 +21,18 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'messages array required' });
   }
 
-  const body = {
-    model: MODEL,
-    max_tokens: 8192,
-    messages,
-    system: system || '',
-    stream: false,
-  };
+  const openaiMessages = system
+    ? [{ role: 'system', content: system }, ...messages]
+    : messages;
+
+  const body = { model: MODEL, max_tokens: 8192, messages: openaiMessages, stream: false };
 
   try {
-    const apiRes = await fetch(`${OPENROUTER_BASE}/messages`, {
+    const apiRes = await fetch(`${NVIDIA_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': SITE_URL,
-        'X-Title': SITE_NAME,
+        'Authorization': `Bearer ${NVIDIA_API_KEY}`,
       },
       body: JSON.stringify(body),
     });
@@ -50,7 +43,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const data = await apiRes.json();
-    const text = data.content?.map(c => c.text).filter(Boolean).join('') || '';
+    const text = data.choices?.[0]?.message?.content || '';
     res.json({ content: text, model: data.model, usage: data.usage });
   } catch (err) {
     res.status(502).json({ error: err.message });
@@ -63,22 +56,18 @@ app.post('/api/chat/stream', async (req, res) => {
     return res.status(400).json({ error: 'messages array required' });
   }
 
-  const body = {
-    model: MODEL,
-    max_tokens: 8192,
-    messages,
-    system: system || '',
-    stream: true,
-  };
+  const openaiMessages = system
+    ? [{ role: 'system', content: system }, ...messages]
+    : messages;
+
+  const body = { model: MODEL, max_tokens: 8192, messages: openaiMessages, stream: true };
 
   try {
-    const apiRes = await fetch(`${OPENROUTER_BASE}/messages`, {
+    const apiRes = await fetch(`${NVIDIA_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': SITE_URL,
-        'X-Title': SITE_NAME,
+        'Authorization': `Bearer ${NVIDIA_API_KEY}`,
         'Accept': 'text/event-stream',
       },
       body: JSON.stringify(body),

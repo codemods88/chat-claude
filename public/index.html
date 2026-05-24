@@ -257,7 +257,7 @@
 <header>
   <h1>Chat Claude</h1>
   <div class="header-actions">
-    <span class="model-badge" id="modelBadge">anthropic/claude-sonnet-4</span>
+    <span class="model-badge" id="modelBadge">llama-3.2-3b (NVIDIA)</span>
     <button id="clearBtn" title="Clear conversation">Clear</button>
   </div>
 </header>
@@ -426,8 +426,9 @@ async function sendMessage() {
           if (data === '[DONE]') continue;
           try {
             const parsed = JSON.parse(data);
-            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-              fullContent += parsed.delta.text;
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullContent += delta;
               assistantDiv.querySelector('.bubble').textContent = fullContent;
               chatContainer.scrollTop = chatContainer.scrollHeight;
             }
@@ -441,9 +442,8 @@ async function sendMessage() {
       if (data !== '[DONE]') {
         try {
           const parsed = JSON.parse(data);
-          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-            fullContent += parsed.delta.text;
-          }
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (delta) fullContent += delta;
         } catch {}
       }
     }
