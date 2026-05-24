@@ -17,6 +17,10 @@ app.use(express.json({ limit: '10mb' }));
 
 app.use(express.static('public'));
 
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, time: Date.now() });
+});
+
 app.post('/api/chat', async (req, res) => {
   const { messages, system } = req.body;
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
