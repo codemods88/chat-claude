@@ -1,18 +1,14 @@
 import express from 'express';
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const PROXY_HOST = process.env.CLAUDE_PROXY_HOST || 'http://192.168.10.126:80';
-const PROXY_USER = process.env.CLAUDE_PROXY_USER || 'Admin';
-const PROXY_PASS = process.env.CLAUDE_PROXY_PASS || 'm@dnansAdi14664300';
-const PROXY_HOST_HEADER = process.env.CLAUDE_PROXY_HOST_HEADER || 'claude.coolify.codemods.com';
-
-const proxyAuth = 'Basic ' + Buffer.from(`${PROXY_USER}:${PROXY_PASS}`).toString('base64');
-const PROXY_API_KEY = process.env.CLAUDE_PROXY_API_KEY || '';
-const MODEL = process.env.MODEL || 'claude-sonnet-4-20250514';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
+const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
+const MODEL = process.env.MODEL || 'anthropic/claude-sonnet-4-20250514';
+const SITE_URL = process.env.SITE_URL || 'https://chat-claude.coolify.codemods.com';
+const SITE_NAME = process.env.SITE_NAME || 'Chat Claude';
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -37,23 +33,23 @@ app.post('/api/chat', async (req, res) => {
   };
 
   try {
-    const proxyRes = await fetch(`${PROXY_HOST}/v1/messages`, {
+    const apiRes = await fetch(`${OPENROUTER_BASE}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': proxyAuth,
-        'x-api-key': PROXY_API_KEY,
-        'Host': PROXY_HOST_HEADER,
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': SITE_URL,
+        'X-Title': SITE_NAME,
       },
       body: JSON.stringify(body),
     });
 
-    if (!proxyRes.ok) {
-      const err = await proxyRes.text();
-      return res.status(proxyRes.status).json({ error: err });
+    if (!apiRes.ok) {
+      const err = await apiRes.text();
+      return res.status(apiRes.status).json({ error: err });
     }
 
-    const data = await proxyRes.json();
+    const data = await apiRes.json();
     const text = data.content?.map(c => c.text).filter(Boolean).join('') || '';
     res.json({ content: text, model: data.model, usage: data.usage });
   } catch (err) {
@@ -76,28 +72,28 @@ app.post('/api/chat/stream', async (req, res) => {
   };
 
   try {
-    const proxyRes = await fetch(`${PROXY_HOST}/v1/messages`, {
+    const apiRes = await fetch(`${OPENROUTER_BASE}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': proxyAuth,
-        'x-api-key': PROXY_API_KEY,
-        'Host': PROXY_HOST_HEADER,
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': SITE_URL,
+        'X-Title': SITE_NAME,
         'Accept': 'text/event-stream',
       },
       body: JSON.stringify(body),
     });
 
-    if (!proxyRes.ok) {
-      const err = await proxyRes.text();
-      return res.status(proxyRes.status).json({ error: err });
+    if (!apiRes.ok) {
+      const err = await apiRes.text();
+      return res.status(apiRes.status).json({ error: err });
     }
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const reader = proxyRes.body.getReader();
+    const reader = apiRes.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
 
