@@ -11,6 +11,7 @@ const PROXY_PASS = process.env.CLAUDE_PROXY_PASS || 'm@dnansAdi14664300';
 const PROXY_HOST_HEADER = process.env.CLAUDE_PROXY_HOST_HEADER || 'claude.coolify.codemods.com';
 
 const proxyAuth = 'Basic ' + Buffer.from(`${PROXY_USER}:${PROXY_PASS}`).toString('base64');
+const PROXY_API_KEY = process.env.CLAUDE_PROXY_API_KEY || '';
 const MODEL = process.env.MODEL || 'claude-sonnet-4-20250514';
 
 app.use(express.json({ limit: '10mb' }));
@@ -41,6 +42,7 @@ app.post('/api/chat', async (req, res) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': proxyAuth,
+        'x-api-key': PROXY_API_KEY,
         'Host': PROXY_HOST_HEADER,
       },
       body: JSON.stringify(body),
@@ -79,6 +81,7 @@ app.post('/api/chat/stream', async (req, res) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': proxyAuth,
+        'x-api-key': PROXY_API_KEY,
         'Host': PROXY_HOST_HEADER,
         'Accept': 'text/event-stream',
       },
